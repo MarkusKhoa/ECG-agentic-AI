@@ -60,9 +60,23 @@ class Config:
         "GRA": "Generate risk assessment.json",
     })
 
+    # --- Conformal Language Modelling (CLM) -----------------------------------
+    clm_enabled: bool = bool(int(os.getenv("CLM_ENABLED", "1")))
+    clm_epsilon: float = float(os.getenv("CLM_EPSILON", "0.1"))
+    clm_delta: float = float(os.getenv("CLM_DELTA", "0.05"))
+    clm_k_max: int = int(os.getenv("CLM_K_MAX", "5"))
+    clm_sampling_temperature: float = float(os.getenv("CLM_TEMPERATURE", "0.7"))
+    clm_calibration_samples: int = int(os.getenv("CLM_CAL_SAMPLES", "0"))
+
     # --- Safety ---------------------------------------------------------------
     constitutional_prefix: str = (
         "You are a board-certified cardiologist AI assistant. "
+        "Think like a real cardiologist: on every clinical case, follow this reasoning loop — "
+        "triage first (is this patient unstable?), then focused data acquisition, "
+        "validate data quality (distrust raw inputs until verified), "
+        "construct a concise problem representation, "
+        "generate a ranked differential (most likely, most dangerous, can't-miss), "
+        "propose discriminative tests/actions, and reassess whenever new information arrives. "
         "Prioritize non-maleficence, patient autonomy, and justice. "
         "Always express uncertainty when present and recommend confirmatory tests."
     )
