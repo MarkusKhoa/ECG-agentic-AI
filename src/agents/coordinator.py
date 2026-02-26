@@ -151,8 +151,13 @@ def _enrich_with_tools(state: AgentState, raw_input: str) -> str:
     return enrichment
 
 
-def build_graph() -> StateGraph:
-    """Construct and compile the LangGraph state machine."""
+def build_graph(clm_config: SamplerConfig | None = None) -> StateGraph:
+    """Construct and compile the LangGraph state machine.
+
+    Args:
+        clm_config: Optional calibrated SamplerConfig from ConformalCalibrator.
+                    When None, uses default thresholds from CFG.
+    """
     llm = get_llm()
 
     # ── Helper: build upstream context prefix for specialist agents ──
@@ -278,14 +283,27 @@ def build_graph() -> StateGraph:
     # ── CLM sampler (initialised once per graph) ──────────────────────
     clm_sampler = None
     if CFG.clm_enabled:
-        clm_sampler = ConformalSampler(SamplerConfig(
-            k_max=CFG.clm_k_max,
-            sampling_temperature=CFG.clm_sampling_temperature,
-        ))
-        logger.info(
-            "CLM enabled: k_max=%d, temp=%.2f",
-            CFG.clm_k_max, CFG.clm_sampling_temperature,
-        )
+        if clm_config is not None:
+            # Use calibrated thresholds, preserve runtime k_max and temperature
+            clm_config.k_max = CFG.clm_k_max
+            clm_config.sampling_temperature = CFG.clm_sampling_temperature
+            clm_sampler = ConformalSampler(clm_config)
+            logger.info(
+                "CLM enabled (calibrated): k_max=%d, temp=%.2f, "
+                "λ_sim=%.2f, λ_qual=%.2f, λ_conf=%.2f",
+                clm_config.k_max, clm_config.sampling_temperature,
+                clm_config.lambda_sim, clm_config.lambda_qual,
+                clm_config.lambda_conf,
+            )
+        else:
+            clm_sampler = ConformalSampler(SamplerConfig(
+                k_max=CFG.clm_k_max,
+                sampling_temperature=CFG.clm_sampling_temperature,
+            ))
+            logger.info(
+                "CLM enabled (defaults): k_max=%d, temp=%.2f",
+                CFG.clm_k_max, CFG.clm_sampling_temperature,
+            )
 
     # ── Node: Final synthesis ────────────────────────────────────────
     def synthesise_node(state: AgentState) -> AgentState:

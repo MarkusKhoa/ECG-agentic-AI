@@ -68,6 +68,17 @@ def main() -> None:
         default=None,
         help="Override CLM sampling budget (k_max).",
     )
+    parser.add_argument(
+        "--clm-cal-samples",
+        type=int,
+        default=None,
+        help="Number of calibration samples per task for CLM (0 = no calibration).",
+    )
+    parser.add_argument(
+        "--recalibrate",
+        action="store_true",
+        help="Force CLM recalibration (ignore cached results).",
+    )
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -81,6 +92,10 @@ def main() -> None:
         CFG.clm_enabled = False
     if args.clm_k_max is not None:
         CFG.clm_k_max = args.clm_k_max
+    if args.clm_cal_samples is not None:
+        CFG.clm_calibration_samples = args.clm_cal_samples
+    if args.recalibrate:
+        CFG.clm_recalibrate = True
 
     # Validate API key for OpenAI backend
     if CFG.llm_backend == "openai" and not os.getenv("OPENAI_API_KEY"):
@@ -101,8 +116,9 @@ def main() -> None:
     logging.info("Max samples : %s", CFG.max_samples if CFG.max_samples else "all")
     logging.info("Results dir : %s", CFG.results_dir)
     logging.info("Tasks       : %s", args.tasks or "ALL")
-    logging.info("CLM enabled : %s (k_max=%d, ε=%.2f)",
-                 CFG.clm_enabled, CFG.clm_k_max, CFG.clm_epsilon)
+    logging.info("CLM enabled : %s (k_max=%d, ε=%.2f, cal_samples=%d)",
+                 CFG.clm_enabled, CFG.clm_k_max, CFG.clm_epsilon,
+                 CFG.clm_calibration_samples)
     logging.info("=" * 60)
 
     results = evaluate_all(tasks=args.tasks, save=True)

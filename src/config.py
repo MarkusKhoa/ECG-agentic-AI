@@ -67,6 +67,7 @@ class Config:
     clm_k_max: int = int(os.getenv("CLM_K_MAX", "5"))
     clm_sampling_temperature: float = float(os.getenv("CLM_TEMPERATURE", "0.7"))
     clm_calibration_samples: int = int(os.getenv("CLM_CAL_SAMPLES", "0"))
+    clm_recalibrate: bool = False
 
     # --- Safety ---------------------------------------------------------------
     constitutional_prefix: str = (
