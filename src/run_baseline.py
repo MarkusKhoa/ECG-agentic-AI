@@ -57,17 +57,6 @@ def main() -> None:
         action="store_true",
         help="Enable DEBUG logging.",
     )
-    parser.add_argument(
-        "--no-clm",
-        action="store_true",
-        help="Disable Conformal Language Modelling.",
-    )
-    parser.add_argument(
-        "--clm-k-max",
-        type=int,
-        default=None,
-        help="Override CLM sampling budget (k_max).",
-    )
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -77,10 +66,6 @@ def main() -> None:
 
     if args.max_samples is not None:
         CFG.max_samples = args.max_samples
-    if args.no_clm:
-        CFG.clm_enabled = False
-    if args.clm_k_max is not None:
-        CFG.clm_k_max = args.clm_k_max
 
     # Validate API key for OpenAI backend
     if CFG.llm_backend == "openai" and not os.getenv("OPENAI_API_KEY"):
@@ -101,17 +86,12 @@ def main() -> None:
     logging.info("Max samples : %s", CFG.max_samples if CFG.max_samples else "all")
     logging.info("Results dir : %s", CFG.results_dir)
     logging.info("Tasks       : %s", args.tasks or "ALL")
-    logging.info("CLM enabled : %s (k_max=%d, ε=%.2f)",
-                 CFG.clm_enabled, CFG.clm_k_max, CFG.clm_epsilon)
     logging.info("=" * 60)
 
     results = evaluate_all(tasks=args.tasks, save=True)
 
     # Print summary
-    has_clm = any(
-        "clm_avg_set_size" in res.get("metrics", {}) for res in results.values()
-    )
-    width = 115 if has_clm else 90
+    width = 90
     print("\n" + "=" * width)
     print("  RESULTS SUMMARY")
     print("=" * width)
@@ -119,8 +99,6 @@ def main() -> None:
         f"  {'Task':<8} {'N':>6}  {'ROUGE-1':>8}  {'ROUGE-2':>8}  {'ROUGE-L':>8}  "
         f"{'BLEU-1':>8}  {'METEOR':>8}  {'BS-F1':>8}"
     )
-    if has_clm:
-        header += f"  {'CLM-Sz':>7} {'CLM-Cf':>7} {'CLM-Rl':>7}"
     print(header)
     print("-" * width)
     for task, res in results.items():
@@ -134,18 +112,10 @@ def main() -> None:
                 f"{m.get('rougeL', 0):>8.4f}  {m.get('bleu1', 0):>8.4f}  "
                 f"{m.get('meteor', 0):>8.4f}  {m.get('bertscore_f1', 0):>8.4f}"
             )
-            if has_clm and "clm_avg_set_size" in m:
-                line += (
-                    f"  {m['clm_avg_set_size']:>7.1f}"
-                    f" {m.get('clm_avg_confidence', 0):>7.4f}"
-                    f" {m.get('clm_avg_reliable_frac', 0):>7.4f}"
-                )
             print(line)
             if task == "MEE":
                 print(f"  {'':>8} {'':>6}  Entity-F1: {m.get('entity_f1', 0):.4f}")
     print("=" * width)
-    if has_clm:
-        print("  CLM-Sz = avg prediction set size | CLM-Cf = avg set confidence | CLM-Rl = avg reliable sentence fraction")
     print(f"\nDetailed results written to: {CFG.results_dir}/")
 
 
