@@ -8,25 +8,49 @@ A multi-agent AI system for cardiological ECG analysis, evaluated on the
 ```
 User Query ──► Chief Coordinator (Router)
                     │
-        ┌───────────┼───────────┬──────────────┐
-        ▼           ▼           ▼              ▼
-   Inquiry     ECG Interp.  Diagnostic    Prognosis
-   Agent       Agent        Reasoner      Agent
-        └───────────┼───────────┴──────────────┘
-                    ▼
-            Ethics & Safety Guardian  ◄── parallel review
-                    │
-                    ▼
-              Final Synthesis
+        ┌───────────┴───────────┐
+        │                       │
+    [FAST PATH]            [TRIAGE PATH]
+   (EBK, CK, MEE,         (MROD, PP)
+    PRTK)                      │
+        │                      ▼
+        │              Triage Agent
+        │              (urgency, red-flags)
+        │                      │
+        └──────────┬───────────┘
+                   │
+        ┌──────────┴──────────┐
+        │                     │
+   [SPECIALIST]         [VALIDATION PATH]
+   Inquiry Agent        (CMD, CD, LTD, MC, GRA)
+   ECG Interpreter           │
+   Diagnostic Reasoner       ▼
+   Prognosis Agent    Data Validator Agent
+                      (data quality check)
+        │                     │
+        └──────────┬──────────┘
+                   ▼
+        Ethics & Safety Guardian  ◄── parallel review
+                   │
+                   ▼
+            Final Synthesis (CLM)
 ```
 
-**Agents** (LangGraph state-machine orchestration):
-- **Inquiry Agent** – multi-round patient dialogue, memory correction
-- **ECG Interpreter Agent** – cross-modal ECG ↔ text diagnosis
-- **Diagnostic Reasoner Agent** – complex/long-text diagnosis
-- **Prognosis Agent** – prognostic analysis, treatment planning
-- **Ethics & Safety Guardian** – patient rights, risk assessment, ethical review
-- **Chief Coordinator** – routes tasks, synthesises final answers, revision loop
+**8 Agents** (LangGraph state-machine orchestration):
+
+1. **Chief Coordinator** – routes tasks, manages revision loop, synthesises final answers
+2. **Triage Agent** (Step-Back Prompting) – urgency classification, red-flag screening, clinical framing
+3. **Data Validator Agent** (Structured Clinical Reasoning) – data quality assessment, sentinel value detection
+4. **Inquiry Agent** – multi-round patient dialogue, memory correction
+5. **ECG Interpreter Agent** – cross-modal ECG ↔ text diagnosis, waveform analysis
+6. **Diagnostic Reasoner Agent** – complex/long-text diagnosis, differential generation
+7. **Prognosis Agent** – prognostic analysis, treatment planning, risk stratification
+8. **Ethics & Safety Guardian** – patient rights, risk assessment, ethical review, revision triggers
+
+**Dynamic Invocation** (cost-aware routing):
+- **Fast path** (0 extra calls): EBK, CK, MEE, PRTK → Router → Specialist → Synthesis
+- **Triage path** (+1 call): MROD, PP → Router → Triage → Specialist → Synthesis
+- **Full clinical** (+2 calls): CMD, CD, LTD, MC, GRA → Router → Triage → Validator → Specialist → Synthesis
 
 **Tools**: ECG waveform parser, CHA₂DS₂-VASc / GRACE risk calculators, AHA/ESC guideline lookup.
 
