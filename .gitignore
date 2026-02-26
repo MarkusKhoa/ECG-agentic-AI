@@ -3,3 +3,4 @@ data/
 results/
 __pycache__/
 *.pyc
+cardio_guidelines/raw/
